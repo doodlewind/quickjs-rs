@@ -23,10 +23,15 @@
  * THE SOFTWARE.
  */
 #include <stdlib.h>
+#ifndef __PSP__
 #include <stdio.h>
+#endif
 #include <stdarg.h>
 #include <string.h>
 
+#ifdef __PSP__
+#include "patch.h"
+#endif
 #include "cutils.h"
 
 void pstrcpy(char *buf, int buf_size, const char *str)

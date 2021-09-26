@@ -22,12 +22,17 @@
  * THE SOFTWARE.
  */
 #include <stdlib.h>
+#ifndef __PSP__
 #include <stdio.h>
+#endif
 #include <stdarg.h>
 #include <inttypes.h>
 #include <string.h>
 #include <assert.h>
 
+#ifdef __PSP__
+#include "patch.h"
+#endif
 #include "cutils.h"
 #include "libregexp.h"
 

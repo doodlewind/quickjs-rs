@@ -71,10 +71,10 @@ fn main() {
         .files(
             [
                 "cutils.c",
-                "libbf.c",
                 "libregexp.c",
                 "libunicode.c",
                 "quickjs.c",
+                "patch.c",
                 // Custom wrappers.
                 "static-functions.c",
             ]
@@ -86,7 +86,6 @@ fn main() {
             "CONFIG_VERSION",
             format!("\"{}\"", quickjs_version.trim()).as_str(),
         )
-        .define("CONFIG_BIGNUM", None)
         // The below flags are used by the official Makefile.
         .flag_if_supported("-Wchar-subscripts")
         .flag_if_supported("-Wno-array-bounds")
@@ -104,12 +103,19 @@ fn main() {
         .flag_if_supported("-Wno-cast-function-type")
         .flag_if_supported("-Wno-implicit-fallthrough")
         .flag_if_supported("-Wno-enum-conversion")
-        // cc uses the OPT_LEVEL env var by default, but we hardcode it to -O2
-        // since release builds use -O3 which might be problematic for quickjs,
-        // and debug builds only happen once anyway so the optimization slowdown
-        // is fine.
-        .opt_level(2)
+        .opt_level(0)
+        // PSP cross compile build configs are passed from build.sh
+        // .target("mips")
+        // .compiler("/usr/local/opt/llvm/bin/clang")
+        .define("__PSP__", None)
+        .define("__need_inttypes", None)
+        .include("../../mipsel-sony-psp/psp/include")
         .compile(LIB_NAME);
+
+    println!("cargo:rustc-link-lib=static=c");
+    println!("cargo:rustc-link-lib=static=m");
+    println!("cargo:rustc-link-lib=static=pthread-psp");
+    println!("cargo:rustc-link-search=native=../../mipsel-sony-psp/psp/lib");
 
     std::fs::copy(embed_path.join("bindings.rs"), out_path.join("bindings.rs"))
         .expect("Could not copy bindings.rs");

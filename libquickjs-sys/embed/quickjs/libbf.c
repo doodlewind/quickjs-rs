@@ -22,7 +22,9 @@
  * THE SOFTWARE.
  */
 #include <stdlib.h>
+#ifndef __PSP__
 #include <stdio.h>
+#endif
 #include <inttypes.h>
 #include <math.h>
 #include <string.h>
@@ -32,6 +34,9 @@
 #include <immintrin.h>
 #endif
 
+#ifdef __PSP__
+#include "patch.h"
+#endif
 #include "cutils.h"
 #include "libbf.h"
 

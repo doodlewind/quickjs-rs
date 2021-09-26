@@ -23,7 +23,9 @@
  * THE SOFTWARE.
  */
 #include <stdlib.h>
+#ifndef __PSP__
 #include <stdio.h>
+#endif
 #include <stdarg.h>
 #include <inttypes.h>
 #include <string.h>
@@ -32,12 +34,24 @@
 #include <time.h>
 #include <fenv.h>
 #include <math.h>
+
+#ifdef __PSP__
+#define FE_TONEAREST        0x0000
+#define FE_DOWNWARD         0x0400
+#define FE_UPWARD           0x0800
+#define FE_TOWARDZERO       0x0c00
+#undef __APPLE__
+#endif
+
 #if defined(__APPLE__)
 #include <malloc/malloc.h>
 #elif defined(__linux__)
 #include <malloc.h>
 #elif defined(__FreeBSD__)
 #include <malloc_np.h>
+#elif defined(__PSP__)
+#include <malloc.h>
+#include "patch.h"
 #endif
 
 #include "cutils.h"
@@ -71,6 +85,10 @@
    threads */
 #if !defined(EMSCRIPTEN)
 #define CONFIG_ATOMICS
+#endif
+
+#ifdef __PSP__
+#undef CONFIG_ATOMICS
 #endif
 
 #if !defined(EMSCRIPTEN)
@@ -1760,7 +1778,8 @@ static const JSMallocFunctions def_malloc_funcs = {
     (size_t (*)(const void *))malloc_usable_size,
 #else
     /* change this to `NULL,` if compilation fails */
-    malloc_usable_size,
+    NULL
+    // malloc_usable_size,
 #endif
 };
 
@@ -2168,6 +2187,7 @@ JSContext *JS_NewContext(JSRuntime *rt)
 #ifdef CONFIG_BIGNUM
     JS_AddIntrinsicBigInt(ctx);
 #endif
+    debug_log("JSContext init success", 0);
     return ctx;
 }
 
@@ -6188,6 +6208,7 @@ void JS_ComputeMemoryUsage(JSRuntime *rt, JSMemoryUsage *s)
         s->js_func_size + s->js_func_code_size + s->js_func_pc2line_size;
 }
 
+#ifndef __PSP__
 void JS_DumpMemoryUsage(FILE *fp, const JSMemoryUsage *s, JSRuntime *rt)
 {
     fprintf(fp, "QuickJS memory usage -- "
@@ -6316,6 +6337,8 @@ void JS_DumpMemoryUsage(FILE *fp, const JSMemoryUsage *s, JSRuntime *rt)
                 "binary objects", s->binary_object_count, s->binary_object_size);
     }
 }
+
+#endif
 
 JSValue JS_GetGlobalObject(JSContext *ctx)
 {
@@ -33730,8 +33753,21 @@ JSValue JS_EvalThis(JSContext *ctx, JSValueConst this_obj,
 JSValue JS_Eval(JSContext *ctx, const char *input, size_t input_len,
                 const char *filename, int eval_flags)
 {
-    return JS_EvalThis(ctx, ctx->global_obj, input, input_len, filename,
-                       eval_flags);
+    debug_log("C side input_len: ", input_len);
+
+    // XXX: use a fresh JSContext from C
+    JSRuntime *runtime = JS_NewRuntime();
+    JSContext *_ctx = JS_NewContext(runtime);
+
+    const char *code = "function test(a) { return a + 999 } test(1)";
+    JSValue result = JS_EvalThis(_ctx, _ctx->global_obj, code, strlen(code), "script",
+                        0);
+    debug_log("result tag", JS_VALUE_GET_TAG(result));
+    debug_log("result value", JS_VALUE_GET_INT(result));
+    return result;
+
+    // return JS_EvalThis(ctx, ctx->global_obj, input, input_len, filename,
+    //                    eval_flags);
 }
 
 int JS_ResolveModule(JSContext *ctx, JSValueConst obj)
@@ -41992,6 +42028,7 @@ static int getTimezoneOffset(int64_t time) {
     /* XXX: TODO */
     return 0;
 #else
+#ifndef __PSP__
     time_t ti;
     struct tm tm;
 
@@ -42019,6 +42056,8 @@ static int getTimezoneOffset(int64_t time) {
     ti = time;
     localtime_r(&ti, &tm);
     return -tm.tm_gmtoff / 60;
+#endif // __PSP__
+    return 0;
 #endif
 }
 
@@ -51029,6 +51068,8 @@ void JS_AddIntrinsicBaseObjects(JSContext *ctx)
                                js_string_iterator_proto_funcs,
                                countof(js_string_iterator_proto_funcs));
 
+    // XXX: won't work without this line on PPSSPP
+    debug_log("intrinsic base string object init success", 0);
     /* Math: create as autoinit object */
     js_random_init(ctx);
     JS_SetPropertyFunctionList(ctx, ctx->global_obj, js_math_obj, countof(js_math_obj));

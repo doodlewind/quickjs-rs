@@ -25,7 +25,12 @@
 #ifndef QUICKJS_H
 #define QUICKJS_H
 
+#ifndef __PSP__
 #include <stdio.h>
+#endif
+#ifdef __PSP__
+#include <stddef.h>
+#endif
 #include <stdint.h>
 
 #ifdef __cplusplus
@@ -413,7 +418,9 @@ typedef struct JSMemoryUsage {
 } JSMemoryUsage;
 
 void JS_ComputeMemoryUsage(JSRuntime *rt, JSMemoryUsage *s);
+#ifndef __PSP__
 void JS_DumpMemoryUsage(FILE *fp, const JSMemoryUsage *s, JSRuntime *rt);
+#endif
 
 /* atom support */
 #define JS_ATOM_NULL 0
