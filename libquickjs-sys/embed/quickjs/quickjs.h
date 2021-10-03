@@ -131,7 +131,7 @@ static inline JS_BOOL JS_VALUE_IS_NAN(JSValue v)
 {
     return 0;
 }
-    
+
 #elif defined(JS_NAN_BOXING)
 
 typedef uint64_t JSValue;

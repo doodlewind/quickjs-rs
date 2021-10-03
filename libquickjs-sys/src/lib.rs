@@ -9,22 +9,7 @@ use libc;
 
 pub type size_t = libc::c_ulong;
 
-#[repr(C)]
-#[derive(Copy, Clone)]
-pub union JSValueUnion {
-    pub int32: i32,
-    pub float64: f64,
-    pub ptr: *mut libc::c_void,
-    // _bindgen_union_align: u64,
-    _bindgen_union_align: u32,
-}
-
-#[repr(C)]
-#[derive(Copy, Clone)]
-pub struct JSValue {
-    pub u: JSValueUnion,
-    pub tag: i64,
-}
+pub type JSValue = u64;
 
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
@@ -277,7 +262,7 @@ extern "C" {
     pub fn JS_Eval(
         ctx: *mut JSContext,
         input: *const libc::c_char,
-        input_len: libc::c_uint,
+        input_len: usize,
         filename: *const libc::c_char,
         eval_flags: libc::c_int,
     ) -> JSValue;

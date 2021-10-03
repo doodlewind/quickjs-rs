@@ -33753,21 +33753,8 @@ JSValue JS_EvalThis(JSContext *ctx, JSValueConst this_obj,
 JSValue JS_Eval(JSContext *ctx, const char *input, size_t input_len,
                 const char *filename, int eval_flags)
 {
-    debug_log("C side input_len: ", input_len);
-
-    // XXX: use a fresh JSContext from C
-    JSRuntime *runtime = JS_NewRuntime();
-    JSContext *_ctx = JS_NewContext(runtime);
-
-    const char *code = "function test(a) { return a + 999 } test(1)";
-    JSValue result = JS_EvalThis(_ctx, _ctx->global_obj, code, strlen(code), "script",
-                        0);
-    debug_log("result tag", JS_VALUE_GET_TAG(result));
-    debug_log("result value", JS_VALUE_GET_INT(result));
-    return result;
-
-    // return JS_EvalThis(ctx, ctx->global_obj, input, input_len, filename,
-    //                    eval_flags);
+    return JS_EvalThis(ctx, ctx->global_obj, input, input_len, filename,
+                       eval_flags);
 }
 
 int JS_ResolveModule(JSContext *ctx, JSValueConst obj)
