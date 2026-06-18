@@ -71,6 +71,7 @@ fn main() {
         .files(
             [
                 "cutils.c",
+                "dtoa.c",
                 "libregexp.c",
                 "libunicode.c",
                 "quickjs.c",

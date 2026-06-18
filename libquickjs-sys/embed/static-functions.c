@@ -58,11 +58,21 @@ JS_BOOL JS_IsBigInt_real(JSContext *ctx, JSValueConst v) {
 }
 
 JS_BOOL JS_IsBigFloat_real(JSValueConst v) {
+#ifdef JS_TAG_BIG_FLOAT
     return JS_IsBigFloat(v);
+#else
+    (void)v;
+    return 0;
+#endif
 }
 
 JS_BOOL JS_IsBigDecimal_real(JSValueConst v) {
+#ifdef JS_TAG_BIG_DECIMAL
     return JS_IsBigDecimal(v);
+#else
+    (void)v;
+    return 0;
+#endif
 }
 
 JS_BOOL JS_IsBool_real(JSValueConst v) {
