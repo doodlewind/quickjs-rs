@@ -116,7 +116,10 @@ fn main() {
         .opt_level(0);
 
     if is_psp {
-        build.define("__PSP__", None).include(psp_root.join("include"));
+        build
+            .define("__PSP__", None)
+            .define("__psp__", None)
+            .include(psp_root.join("include"));
     }
 
     build.compile(LIB_NAME);
@@ -129,7 +132,9 @@ fn main() {
         println!("cargo:rustc-link-lib=static:-bundle=c");
         println!("cargo:rustc-link-lib=static:-bundle=m");
         println!("cargo:rustc-link-lib=static:-bundle=pthread-psp");
-        println!("cargo:rustc-link-lib=static:-bundle=cglue");
+        if psp_root.join("lib/libcglue.a").exists() {
+            println!("cargo:rustc-link-lib=static:-bundle=cglue");
+        }
     }
 
     std::fs::copy(embed_path.join("bindings.rs"), out_path.join("bindings.rs"))
