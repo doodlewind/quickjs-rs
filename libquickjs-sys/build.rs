@@ -109,7 +109,6 @@ fn main() {
         // .target("mips")
         // .compiler("/usr/local/opt/llvm/bin/clang")
         .define("__PSP__", None)
-        .define("__need_inttypes", None)
         .include("../../mipsel-sony-psp/psp/include")
         .compile(LIB_NAME);
 
