@@ -45,8 +45,16 @@ fn main() {
 
 #[cfg(feature = "bundled")]
 fn main() {
-    let embed_path = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap()).join("embed");
+    println!("cargo:rerun-if-env-changed=PSPDEV");
+
+    let manifest_dir = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
+    let embed_path = manifest_dir.join("embed");
+    let psp_root = env::var_os("PSPDEV")
+        .map(|path| PathBuf::from(path).join("psp"))
+        .unwrap_or_else(|| manifest_dir.join("../../mipsel-sony-psp/psp"));
     let out_path = PathBuf::from(env::var("OUT_DIR").unwrap());
+    let target = env::var("TARGET").unwrap_or_default();
+    let is_psp = target.contains("psp");
 
     let code_dir = out_path.join("quickjs");
     if exists(&code_dir) {
@@ -67,7 +75,8 @@ fn main() {
     eprintln!("Compiling quickjs...");
     let quickjs_version =
         std::fs::read_to_string(code_dir.join("VERSION")).expect("failed to read quickjs version");
-    cc::Build::new()
+    let mut build = cc::Build::new();
+    build
         .files(
             [
                 "cutils.c",
@@ -104,18 +113,24 @@ fn main() {
         .flag_if_supported("-Wno-cast-function-type")
         .flag_if_supported("-Wno-implicit-fallthrough")
         .flag_if_supported("-Wno-enum-conversion")
-        .opt_level(0)
-        // PSP cross compile build configs are passed from build.sh
-        // .target("mips")
-        // .compiler("/usr/local/opt/llvm/bin/clang")
-        .define("__PSP__", None)
-        .include("../../mipsel-sony-psp/psp/include")
-        .compile(LIB_NAME);
+        .opt_level(0);
 
-    println!("cargo:rustc-link-lib=static=c");
-    println!("cargo:rustc-link-lib=static=m");
-    println!("cargo:rustc-link-lib=static=pthread-psp");
-    println!("cargo:rustc-link-search=native=../../mipsel-sony-psp/psp/lib");
+    if is_psp {
+        build.define("__PSP__", None).include(psp_root.join("include"));
+    }
+
+    build.compile(LIB_NAME);
+
+    if is_psp {
+        println!(
+            "cargo:rustc-link-search=native={}",
+            psp_root.join("lib").display()
+        );
+        println!("cargo:rustc-link-lib=static:-bundle=c");
+        println!("cargo:rustc-link-lib=static:-bundle=m");
+        println!("cargo:rustc-link-lib=static:-bundle=pthread-psp");
+        println!("cargo:rustc-link-lib=static:-bundle=cglue");
+    }
 
     std::fs::copy(embed_path.join("bindings.rs"), out_path.join("bindings.rs"))
         .expect("Could not copy bindings.rs");
