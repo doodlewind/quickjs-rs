@@ -35,10 +35,18 @@
 #include <fenv.h>
 #include <math.h>
 #ifdef __PSP__
+#ifndef FE_TONEAREST
 #define FE_TONEAREST 0
+#endif
+#ifndef FE_DOWNWARD
 #define FE_DOWNWARD 0
+#endif
+#ifndef FE_UPWARD
 #define FE_UPWARD 0
+#endif
+#ifndef FE_TOWARDZERO
 #define FE_TOWARDZERO 0
+#endif
 #endif
 #if defined(__APPLE__)
 #include <malloc/malloc.h>
