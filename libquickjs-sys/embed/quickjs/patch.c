@@ -1,7 +1,13 @@
 #include <stdint.h>
 #include <stdbool.h>
+#include <limits.h>
 
+/* PSP's newlib limits.h can miss CHAR_BIT under `clang -target
+   mipsel-sony-psp` (its include_next never reaches the compiler builtin
+   header), so keep the pre-vita fallback behind a guard. */
+#ifndef CHAR_BIT
 #define CHAR_BIT 8
+#endif
 
 typedef double src_t;
 typedef uint64_t src_rep_t;

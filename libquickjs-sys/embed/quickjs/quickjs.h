@@ -65,7 +65,7 @@ typedef uint32_t JSAtom;
 #define JS_PTR64_DEF(a)
 #endif
 
-#ifndef JS_PTR64
+#if !defined(JS_PTR64) && !defined(JS_NO_NAN_BOXING)
 #define JS_NAN_BOXING
 #endif
 
