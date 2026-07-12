@@ -55,6 +55,7 @@ fn main() {
     let out_path = PathBuf::from(env::var("OUT_DIR").unwrap());
     let target = env::var("TARGET").unwrap_or_default();
     let is_psp = target.contains("psp");
+    let is_vita = target.contains("vita");
 
     let code_dir = out_path.join("quickjs");
     if exists(&code_dir) {
@@ -120,6 +121,17 @@ fn main() {
             .define("__PSP__", None)
             .define("__psp__", None)
             .include(psp_root.join("include"));
+    }
+
+    // QuickJS defaults to NaN-boxed JSValue on 32-bit targets, while the
+    // checked-in Rust bindings use the portable 16-byte tagged structure.
+    // Keep both sides of the Vita FFI on that same representation. Vita's
+    // newlib also lacks tm_gmtoff; quickjs.c has a small target guard below.
+    if is_vita {
+        build
+            .define("__PSVITA__", None)
+            .define("__vita__", None)
+            .define("JS_NO_NAN_BOXING", None);
     }
 
     build.compile(LIB_NAME);

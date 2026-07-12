@@ -1,7 +1,6 @@
 #include <stdint.h>
 #include <stdbool.h>
-
-#define CHAR_BIT 8
+#include <limits.h>
 
 typedef double src_t;
 typedef uint64_t src_rep_t;

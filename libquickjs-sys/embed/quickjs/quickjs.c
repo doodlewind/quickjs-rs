@@ -50,9 +50,11 @@
 #endif
 #if defined(__APPLE__)
 #include <malloc/malloc.h>
-#elif defined(__PSP__)
+#elif defined(__PSP__) || defined(__vita__)
 #include <malloc.h>
+#ifdef __PSP__
 #include "patch.h"
+#endif
 #elif defined(__linux__) || defined(__GLIBC__)
 #include <malloc.h>
 #elif defined(__FreeBSD__)
@@ -65,6 +67,11 @@
 #include "libregexp.h"
 #include "libunicode.h"
 #include "dtoa.h"
+
+#ifdef __vita__
+_Static_assert(sizeof(JSValue) == 16, "Vita JSValue must be 16 bytes");
+_Static_assert(_Alignof(JSValue) == 8, "Vita JSValue must be 8-byte aligned");
+#endif
 
 #define OPTIMIZE         1
 #define SHORT_OPCODES    1
@@ -90,7 +97,7 @@
 #if !defined(__EMSCRIPTEN__)
 #define CONFIG_ATOMICS
 #endif
-#ifdef __PSP__
+#if defined(__PSP__) || defined(__vita__)
 #undef CONFIG_ATOMICS
 #endif
 
@@ -2164,6 +2171,8 @@ static size_t js_def_malloc_usable_size(const void *ptr)
     return _msize((void *)ptr);
 #elif defined(__EMSCRIPTEN__)
     return 0;
+#elif defined(__vita__)
+    return malloc_usable_size((void *)ptr);
 #elif defined(__linux__) || defined(__GLIBC__)
     return malloc_usable_size((void *)ptr);
 #else
@@ -47293,7 +47302,8 @@ static int getTimezoneOffset(int64_t time)
         res = (gm_ti - loc_ti) / 60;
     }
 #else
-#ifdef __PSP__
+#if defined(__PSP__) || defined(__vita__)
+    (void)ti;
     res = 0;
 #else
     {
@@ -57292,7 +57302,7 @@ static JSValue js_typed_array_get_byteOffset(JSContext *ctx,
 JSValue JS_NewTypedArray(JSContext *ctx, int argc, JSValueConst *argv,
                          JSTypedArrayEnum type)
 {
-    if (type < JS_TYPED_ARRAY_UINT8C || type > JS_TYPED_ARRAY_FLOAT64)
+    if ((unsigned)type > JS_TYPED_ARRAY_FLOAT64)
         return JS_ThrowRangeError(ctx, "invalid typed array type");
 
     return js_typed_array_constructor(ctx, JS_UNDEFINED, argc, argv,

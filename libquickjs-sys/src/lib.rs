@@ -13,7 +13,35 @@ use libc;
 // from the even register pair $a2:$a3 instead of $a1), so it must be `usize`.
 pub type size_t = usize;
 
+/// QuickJS uses NaN boxing on 32-bit targets by default. Vita opts out so the
+/// ARM AAPCS sees the same portable, 16-byte tagged representation on both
+/// sides of every FFI call.
+#[cfg(all(target_pointer_width = "32", not(target_os = "vita")))]
 pub type JSValue = u64;
+
+#[cfg(any(target_pointer_width = "64", target_os = "vita"))]
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub union JSValueUnion {
+    pub uint64: u64,
+    pub int32: i32,
+    pub float64: f64,
+    pub ptr: *mut libc::c_void,
+}
+
+#[cfg(any(target_pointer_width = "64", target_os = "vita"))]
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct JSValue {
+    pub u: JSValueUnion,
+    pub tag: i64,
+}
+
+#[cfg(any(target_pointer_width = "64", target_os = "vita"))]
+const _: [(); 16] = [(); core::mem::size_of::<JSValue>()];
+
+#[cfg(any(target_pointer_width = "64", target_os = "vita"))]
+const _: [(); 8] = [(); core::mem::align_of::<JSValue>()];
 
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
@@ -366,11 +394,67 @@ extern "C" {
 /// JS_CFUNC_generic
 pub const JS_CFUNC_generic: JSCFunctionEnum = 0;
 
-/// NaN-boxing JSValue tag for `undefined` (JS_TAG_UNDEFINED = 3).
+/// JSValue tag for `undefined` (JS_TAG_UNDEFINED = 3).
 pub const JS_TAG_UNDEFINED: i32 = 3;
-/// NaN-boxing JSValue tag for an exception (JS_TAG_EXCEPTION = 6).
+/// JSValue tag for an exception (JS_TAG_EXCEPTION = 6).
 pub const JS_TAG_EXCEPTION: i32 = 6;
 
-/// `JS_UNDEFINED` constructed via the NaN-boxing JS_MKVAL layout: (tag << 32) | val.
-/// Non-refcounted, never needs freeing.
+/// `JS_UNDEFINED` constructed via the NaN-boxing JS_MKVAL layout:
+/// `(tag << 32) | val`. Non-refcounted, never needs freeing.
+#[cfg(all(target_pointer_width = "32", not(target_os = "vita")))]
 pub const JS_UNDEFINED: JSValue = (JS_TAG_UNDEFINED as u64) << 32;
+
+/// `JS_UNDEFINED` in QuickJS's portable tagged representation.
+#[cfg(any(target_pointer_width = "64", target_os = "vita"))]
+pub const JS_UNDEFINED: JSValue = JSValue {
+    u: JSValueUnion { uint64: 0 },
+    tag: JS_TAG_UNDEFINED as i64,
+};
+
+#[cfg(test)]
+mod tests {
+    extern crate std;
+
+    use super::*;
+
+    #[test]
+    fn evaluates_number_through_ffi() {
+        unsafe {
+            let runtime = JS_NewRuntime();
+            assert!(!runtime.is_null());
+
+            let context = JS_NewContext(runtime);
+            assert!(!context.is_null());
+
+            let source = b"40 + 2\0";
+            let filename = b"ffi-test.js\0";
+            let value = JS_Eval(
+                context,
+                source.as_ptr().cast(),
+                source.len() - 1,
+                filename.as_ptr().cast(),
+                JS_EVAL_TYPE_GLOBAL as libc::c_int,
+            );
+
+            if JS_IsException(value) {
+                let exception = JS_GetException(context);
+                let message_ptr = JS_ToCStringLen2(context, core::ptr::null_mut(), exception, 0);
+                assert!(!message_ptr.is_null());
+                let message = std::ffi::CStr::from_ptr(message_ptr)
+                    .to_string_lossy()
+                    .into_owned();
+                JS_FreeCString(context, message_ptr);
+                JS_FreeValue(context, exception);
+                panic!("unexpected QuickJS exception: {}", message);
+            }
+            let mut result = 0.0;
+            assert_eq!(JS_ToFloat64(context, &mut result, value), 0);
+            assert_eq!(result, 42.0);
+            assert!(JS_IsUndefined(JS_UNDEFINED));
+
+            JS_FreeValue(context, value);
+            JS_FreeContext(context);
+            JS_FreeRuntime(runtime);
+        }
+    }
+}
