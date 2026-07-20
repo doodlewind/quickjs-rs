@@ -357,6 +357,11 @@ extern "C" {
     /// immediately, never retain it. Used by the 3D host (gfx3d.rs) to read mesh
     /// + command buffers handed down from JS.
     pub fn JS_GetArrayBuffer(ctx: *mut JSContext, psize: *mut size_t, obj: JSValue) -> *mut u8;
+
+    /// Cycle-collector trigger threshold (bytes allocated since the last run;
+    /// refcounting reclaims acyclic garbage regardless). Default is 256 KB.
+    pub fn JS_SetGCThreshold(rt: *mut JSRuntime, gc_threshold: size_t);
+    pub fn JS_RunGC(rt: *mut JSRuntime);
 }
 
 /// Custom allocator hooks so QuickJS can use the host (Rust/PSP) allocator

@@ -114,7 +114,10 @@ fn main() {
         .flag_if_supported("-Wno-cast-function-type")
         .flag_if_supported("-Wno-implicit-fallthrough")
         .flag_if_supported("-Wno-enum-conversion")
-        .opt_level(0);
+        // The interpreter dispatch loop is the hottest code in every host;
+        // -O2 matches the official QuickJS Makefile. (This sat at -O0 from a
+        // 2021 bring-up experiment — a ~3-5x interpreter slowdown on MIPS.)
+        .opt_level(2);
 
     if is_psp {
         build
